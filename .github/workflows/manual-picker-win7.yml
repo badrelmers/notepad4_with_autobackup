@@ -1,4 +1,4 @@
-name: CI - Custom Manual Builder
+name: CI - Custom Manual Builder (Win7)
 
 on:
   workflow_dispatch:
