@@ -238,7 +238,7 @@ LexerConfigMap = {
 	'NP2LEX_BATCH': {
 		'default_encoding': 'ANSI',
 		'default_line_ending': 'CRLF',
-		'line_comment_string': '@rem ',
+		'line_comment_string': 'rem ',
 		'comment_style_marker': 'SCE_BAT_COMMENT',
 		'escape_char_start': '^',
 		'escape_char_style': 'SCE_BAT_ESCAPECHAR',

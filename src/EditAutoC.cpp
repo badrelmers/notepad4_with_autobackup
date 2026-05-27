@@ -2527,7 +2527,7 @@ void EditToggleCommentLine(bool alternative) noexcept {
 		break;
 
 	case NP2LEX_BATCH:
-		pwszComment = L"@rem ";
+		pwszComment = L"rem ";
 		break;
 
 	case NP2LEX_ERLANG:
