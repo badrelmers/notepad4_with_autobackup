@@ -1,0 +1,169 @@
+name: CI - Custom Manual Builder
+
+on:
+  workflow_dispatch:
+    inputs:
+      git_ref:
+        description: 'Target Commit SHA, Tag, or Branch to build (Leave blank for latest main):'
+        required: false
+        default: ''
+      toolchain:
+        description: 'Select the toolchain to build with:'
+        required: true
+        type: choice
+        default: 'msvc'
+        options:
+          - 'msvc'
+          - 'llvm_msvc'
+          - 'llvm_mingw'
+          - 'mingw'
+      platform:
+        description: 'Select Target Architecture / Instruction Set:'
+        required: true
+        type: choice
+        default: 'x64'
+        options:
+          - 'Win32'
+          - 'x64'
+          - 'ARM64'
+          - 'AVX2'
+          - 'AVX512'
+      msvc_version:
+        description: 'If using MSVC, select Visual Studio version (ignored for MinGW):'
+        required: true
+        type: choice
+        default: '2022'
+        options:
+          - '2022'
+          - '2026'
+      mingw_arch:
+        description: 'If using Standard MinGW, select CRT runtime (ignored for MSVC):'
+        required: true
+        type: choice
+        default: 'x86_64'
+        options:
+          - 'x86_64'
+          - 'ucrt'
+          - 'i686'
+      mingw_compiler:
+        description: 'If using Standard MinGW, select Compiler (ignored for MSVC):'
+        required: true
+        type: choice
+        default: 'GCC'
+        options:
+          - 'GCC'
+          - 'Clang'
+
+defaults:
+  run:
+    shell: cmd
+
+jobs:
+  # ==========================================
+  # 1. MSVC & LLVM-MSVC JOB
+  # ==========================================
+  msvc_builds:
+    if: ${{ github.event.inputs.toolchain == 'msvc' || github.event.inputs.toolchain == 'llvm_msvc' }}
+    name: MSVC ${{ github.event.inputs.msvc_version }} (${{ github.event.inputs.platform }})
+    runs-on: ${{ github.event.inputs.msvc_version == '2026' && 'windows-2025-vs2026' || 'windows-2022' }}
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: ${{ github.event.inputs.git_ref }}
+
+    - name: Update Version Hash
+      run: |
+        "c:/Program Files/Git/usr/bin/sed" -i "s/^\(.\+\)[0-9a-f]\{8\}\(.\+\)$/\1%GITHUB_SHA:~0,8%\2/gm" ./src/VersionRev.h ./matepath/src/VersionRev.h
+
+    - name: Run Install LLVM (Only if LLVM-MSVC selected)
+      if: ${{ github.event.inputs.toolchain == 'llvm_msvc' }}
+      run: |
+        CALL "build\install_llvm.bat" latest 1
+
+    - name: Compile MSVC Native
+      if: ${{ github.event.inputs.toolchain == 'msvc' }}
+      run: |
+        CALL "build\VisualStudio\build.bat" Build ${{ github.event.inputs.platform }} Release 1
+        CALL "locale\build.bat" Build ${{ github.event.inputs.platform }} Release 1
+        CALL "build\make_zip.bat" MSVC ${{ github.event.inputs.platform }} Release Locale 1
+
+    - name: Compile LLVM MSVC Clang
+      if: ${{ github.event.inputs.toolchain == 'llvm_msvc' }}
+      run: |
+        CALL "build\VisualStudio\build.bat" Build ${{ github.event.inputs.platform }} LLVMRelease 1
+        CALL "build\make_zip.bat" LLVM ${{ github.event.inputs.platform }} Release 1
+
+    - name: Upload Native MSVC Artifact
+      if: ${{ github.event.inputs.toolchain == 'msvc' }}
+      uses: actions/upload-artifact@v7
+      with:
+          name: Notepad4_MSVC${{ github.event.inputs.msvc_version }}_i18n_${{ github.event.inputs.platform }}
+          path: 'build\Notepad4_i18n_${{ github.event.inputs.platform }}_*.zip'
+
+    - name: Upload LLVM MSVC Artifact
+      if: ${{ github.event.inputs.toolchain == 'llvm_msvc' }}
+      uses: actions/upload-artifact@v7
+      with:
+          name: Notepad4_Clang_MSVC${{ github.event.inputs.msvc_version }}_en_${{ github.event.inputs.platform }}
+          path: 'build\Notepad4_LLVM_${{ github.event.inputs.platform }}_*.zip'
+
+  # ==========================================
+  # 2. LLVM MINGW JOB
+  # ==========================================
+  llvm_mingw_builds:
+    if: ${{ github.event.inputs.toolchain == 'llvm_mingw' }}
+    name: LLVM-MinGW (${{ github.event.inputs.platform }})
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: ${{ github.event.inputs.git_ref }}
+
+    - name: Update Version Hash
+      run: |
+        "c:/Program Files/Git/usr/bin/sed" -i "s/^\(.\+\)[0-9a-f]\{8\}\(.\+\)$/\1%GITHUB_SHA:~0,8%\2/gm" ./src/VersionRev.h ./matepath/src/VersionRev.h
+
+    - name: Install llvm-mingw
+      run: |
+        CALL "build\install_mingw.bat" llvm
+
+    - name: Clang Release Compilation
+      run: |
+        CALL "build\mingw\build.bat" llvm ${{ github.event.inputs.platform }}
+        CALL "build\make_zip.bat" Clang ${{ github.event.inputs.platform }} Release 1
+
+    - uses: actions/upload-artifact@v7
+      with:
+          name: Notepad4_llvm_mingw_en_${{ github.event.inputs.platform }}
+          path: 'build\Notepad4_Clang_${{ github.event.inputs.platform }}_*.zip'
+
+  # ==========================================
+  # 3. STANDARD MINGW JOB (GCC / CLANG)
+  # ==========================================
+  mingw_standard_builds:
+    if: ${{ github.event.inputs.toolchain == 'mingw' }}
+    name: MinGW ${{ github.event.inputs.mingw_arch }} ${{ github.event.inputs.mingw_compiler }} (${{ github.event.inputs.platform }})
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: ${{ github.event.inputs.git_ref }}
+
+    - name: Update Version Hash
+      run: |
+        "c:/Program Files/Git/usr/bin/sed" -i "s/^\(.\+\)[0-9a-f]\{8\}\(.\+\)$/\1%GITHUB_SHA:~0,8%\2/gm" ./src/VersionRev.h ./matepath/src/VersionRev.h
+
+    - name: Install Toolchain Environment
+      run: |
+        CALL "build\install_mingw.bat" ${{ github.event.inputs.mingw_arch }} ${{ github.event.inputs.mingw_compiler }}
+
+    - name: Compile Binary Variant
+      run: |
+        CALL "build\mingw\build.bat" ${{ github.event.inputs.mingw_arch }} ${{ github.event.inputs.platform }} ${{ github.event.inputs.mingw_compiler }}
+        CALL "build\make_zip.bat" ${{ github.event.inputs.mingw_compiler }} ${{ github.event.inputs.platform }} Release 1
+
+    - uses: actions/upload-artifact@v7
+      with:
+          name: Notepad4_${{ github.event.inputs.mingw_compiler }}${{ github.event.inputs.mingw_compiler == 'Clang' && '_mingw' || '' }}__en_${{ github.event.inputs.platform }}${{ github.event.inputs.mingw_arch == 'ucrt' && '_ucrt' || '' }}
+          path: 'build\Notepad4_${{ github.event.inputs.mingw_compiler }}_${{ github.event.inputs.platform }}_*.zip'
