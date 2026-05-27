@@ -5,15 +5,10 @@ on:
     inputs:
       git_ref:
         description: |
-          Target Commit SHA, Tag, or Branch to build (Leave blank for latest):
-          - Note1: The GitHub Actions summary page has a visual limitation: the header banner, run title, and commit badge always display the latest commit of the triggering branch, regardless of what happens inside the runner. Even if actions/checkout successfully pulls down your specific commit SHA and switches your codebase back in time, the top of the GitHub UI will still show the latest commit hash. 
-          The Fix: To prove exactly what code is being built, I added a quick verification step immediately after the checkout step to log the real HEAD, and the final zip will contain the commit ref too.
-          - Note2: When you trigger a workflow manually via workflow_dispatch, GitHub reads the workflow YAML file strictly from the branch selected in the "Use workflow from" dropdown.
-          If your new configuration changes (the ones handling the git_ref input) are currently sitting on a feature branch and haven't been merged to main yet, leaving that dropdown on main will cause GitHub to execute the old version of your workflow. The old version has no idea the input box exists, so it completely ignores whatever you typed and builds the latest commit of main.
-          The Fix: Ensure the "Use workflow from" dropdown matches the exact branch where your updated workflow file lives.
-  
+          Target Commit SHA, Tag, or Branch to build (Leave blank for latest, see Notes bellow). Selected commit must have this workflow otherwise the latest commit will be built instead of the one you put here:
         required: false
         default: ''
+
       toolchain:
         description: 'Select the toolchain to build with:'
         required: true
@@ -61,6 +56,23 @@ on:
           - 'GCC'
           - 'Clang'
 
+      Note1:
+        description: |
+          - Note1: The GitHub Actions summary page has a visual limitation: the header banner, run title, and commit badge always display the latest commit of the triggering branch, regardless of what happens inside the runner. Even if actions/checkout successfully pulls down your specific commit SHA and switches your codebase back in time, the top of the GitHub UI will still show the latest commit hash. 
+          The Fix: To prove exactly what code is being built, I added a quick verification step immediately after the checkout step to log the real HEAD, and the final zip will contain the commit ref too.
+        required: false
+        default: ''
+        
+      Note2:
+        description: |
+          - Note2: When you trigger a workflow manually via workflow_dispatch, GitHub reads the workflow YAML file strictly from the branch selected in the "Use workflow from" dropdown.
+          If your new configuration changes (the ones handling the git_ref input) are currently sitting on a feature branch and haven't been merged to main yet, leaving that dropdown on main will cause GitHub to execute the old version of your workflow. The old version has no idea the input box exists, so it completely ignores whatever you typed and builds the latest commit of main.
+          The Fix: Ensure the "Use workflow from" dropdown matches the exact branch where your updated workflow file lives.
+        required: false
+        default: ''
+        
+        
+        
 defaults:
   run:
     shell: cmd
