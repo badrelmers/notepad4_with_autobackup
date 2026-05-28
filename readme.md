@@ -1,3 +1,54 @@
+
+# Notepad4 with AutoBackup
+
+This is a personal fork to add some personal preferences and i have no intention to maintain it or update it
+
+I support only win7
+
+Things i added/changed:
+### Add Auto Backup on Save
+  - on pre save:
+      - timestamped snapshot  (<file>.<YYYYMMDD_HHMMSS>) in .bckp/ folder (skipped when last backup is less than 10 seconds ago)
+  - on post save:
+      - rolling .bak          (<file>.bak)                in .bckp/ folder
+      - drive-mirror copy     (drive:\_#\original\path)
+
+It does the following every time you save a file:
+- Backup 1 (.bckp Folder):
+    - It copies the file into a subfolder named .bckp next to your file.
+    - It creates (or updates) a non timestamped backup that overwrites the previous backup.
+    - In addition, it also creates a timestamped copy (with the timestamp inserted before the extension) so you have a history of changes.
+    - Mark the backup folder as hidden
+    
+- Backup 2 (Drive Root “_#” Backup on Windows):
+    - It creates a copy in a drive-root backup folder. This backup mirrors the directory structure of your file on the drive under an _# folder.  Example: If the file being saved is `C:\Projects\main.cpp`, the mirrored backup is copied to `C:\_#\Projects\main.cpp`.
+
+### changed shortcuts to my preference
+by default this was the shortcuts:
+- LINECOMMENT    ctrl+/
+- STREAMCOMMENT  ctrl+q
+- move line      alt+up down
+
+things i changed:
+- IDM_EDIT_LINECOMMENT     Ctrl+/     is now   ctrl+q
+- IDM_EDIT_STREAMCOMMENT   Ctrl+Q     is now   ctrl+shift+q
+- IDM_EDIT_MOVELINEUP      Alt+Up     is now   ctrl+shift+up
+- IDM_EDIT_MOVELINEDOWN    Alt+Down   is now   ctrl+shift+down
+
+### Lexers
+- changed cmd/batch comment from @rem to rem
+
+### branches difference
+there is 2 branches with the same above changes:
+- **notepad4_with_autobackup_win7**: this uses the latest commit in the Main branch and it supports win7+, maybe i will update it from time to time if they introduce something useful
+
+- **notepad4_with_autobackup_xp**: this use the latest version that supports xp, xp was dropped by the original author
+
+by Badr Elmers
+
+_____________________________________________________________
+
+
 # Notepad4 and matepath
 
 Notepad4 (Notepad2⨯2, Notepad2++) is a light-weight Scintilla based text editor for Windows with syntax highlighting, code folding, auto-completion and API list for many programming languages and documents, it's based on (rewritten in modern C++) Florian's [Notepad2](https://www.flos-freeware.ch/notepad2.html) and XhmikosR's [Notepad2-mod](https://xhmikosr.github.io/notepad2-mod/). matepath is a file browser plugin and based on (rewritten in modern C++) Florian's [metapath](https://www.flos-freeware.ch/archive.html).
